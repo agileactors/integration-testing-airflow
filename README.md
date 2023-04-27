@@ -12,6 +12,12 @@ it ingests the transactions in a MinIO store (like S3). Then it marks in another
 
 ## Integration testing
 
+Tested with python 3.11.3.
+
+```bash
+pip install -r requirements-dev.txt
+```
+
 As easy as executing
 
 ```bash
