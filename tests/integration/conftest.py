@@ -7,6 +7,7 @@ from minio import Minio
 from minio.deleteobjects import DeleteObject
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
+from testcontainers.compose import DockerCompose
 
 from tests.integration.db_connection import get_connection
 from tests.integration.airflow_api import AirflowAPI
@@ -36,27 +37,6 @@ def assert_container_is_ready(readiness_check_url) -> requests.Session:
     return request_session
 
 
-class TempComposeFile(object):
-    def __init__(self):
-        self.lines = []
-        with open("docker-compose.yaml") as f:
-            for line in f:
-                if "AIRFLOW_VAR_MINIO_BUFFER" in line:
-                    self.lines.append(
-                        "    AIRFLOW_VAR_MINIO_BUFFER: 'integration-bucket'\n")
-                elif "AIRFLOW_VAR_MSSQL_STORE" in line:
-                    self.lines.append(
-                        "    AIRFLOW_VAR_MSSQL_STORE: 'mssql+pyodbc://testnclogin:ncuser123!!@mssql:1433/testncintegration?TrustServerCertificate=yes&driver=ODBC+Driver+18+for+SQL+Server'\n")
-                else:
-                    self.lines.append(line)
-    def __enter__(self):
-        with open('other_compose.yaml', 'w') as f:
-            f.writelines(self.lines)
-    def __exit__(self, sometype, value, traceback):
-        pass
-        os.unlink('other_compose.yaml')
-
-
 class FixtureDataBase(object):
     def __init__(self):
         self.engine = get_connection()
@@ -67,10 +47,8 @@ class FixtureDataBase(object):
         if not res:
             self.engine.execute("CREATE DATABASE testncintegration")
     def __enter__(self):
-        print('Setting up database')
         setup_database(self.engine)
     def __exit__(self, sometype, value, traceback):
-        print('Tearing down database')
         teardown_database(self.engine)
 
 
@@ -83,14 +61,12 @@ class FixtureMinio(object):
             secret_key="minio_secret_key",
         )
     def __enter__(self):
-        print('Setting up buffer')
         if self.client.bucket_exists("integration-bucket"):
             self.delete_bucket()
         self.client.make_bucket("integration-bucket")
         return self.client
 
     def __exit__(self, sometype, value, traceback):
-        print('Tearing down buffer')
         if self.client.bucket_exists("integration-bucket"):
             self.delete_bucket()
 
@@ -105,3 +81,29 @@ class FixtureMinio(object):
             logging.error("error occurred when deleting object", error)
 
         self.client.remove_bucket("integration-bucket")
+
+
+def custom_transform_line(line: str) -> str:
+    if "AIRFLOW_VAR_MINIO_BUFFER" in line:
+        return "    AIRFLOW_VAR_MINIO_BUFFER: 'integration-bucket'\n"
+    elif "AIRFLOW_VAR_MSSQL_STORE" in line:
+        return "    AIRFLOW_VAR_MSSQL_STORE: 'mssql+pyodbc://testnclogin:ncuser123!!@mssql:1433/testncintegration?TrustServerCertificate=yes&driver=ODBC+Driver+18+for+SQL+Server'\n"
+    else:
+        return line
+
+@pytest.fixture(scope="session", autouse=True)
+def auto_resource(request):
+    with open("docker-compose.yaml") as f:
+        lines = [custom_transform_line(line) for line in f]
+    with open('other_compose.yaml', 'w') as f:
+        f.writelines(lines)
+    compose = DockerCompose(".", compose_file_name='other_compose.yaml', pull=True)
+    compose.start()
+    compose.wait_for('http://localhost:8080')
+
+
+    def auto_resource_fin():
+        compose.stop()
+        os.unlink('other_compose.yaml')
+
+    request.addfinalizer(auto_resource_fin)

@@ -1,11 +1,9 @@
-import time
 from datetime import datetime
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
-from testcontainers.compose import DockerCompose
 
-from tests.integration.conftest import TempComposeFile, FixtureDataBase, FixtureMinio
+from tests.integration.conftest import FixtureDataBase, FixtureMinio
 
 SAMPLE_DAG_ID = "sample"
 
@@ -13,21 +11,15 @@ def test_ingestion_happens_succesfully(
         airflow_api,
 ):
 
-   with TempComposeFile():
-       compose = DockerCompose(".", compose_file_name='other_compose.yaml', pull=True)
-       compose.start()
-       compose.wait_for('http://localhost:8080')
-       with FixtureDataBase():
-           with FixtureMinio() as minio_fixture:
-               ingestion_happens_succesfully(airflow_api, minio_fixture)
-       compose.stop()
+   with FixtureDataBase():
+       with FixtureMinio() as minio_fixture:
+           ingestion_happens_succesfully(airflow_api, minio_fixture)
 
 
 def ingestion_happens_succesfully(
     airflow_api,
     minio_fixture
 ):
-    print("Happy path started!!!")
     engine: Engine = create_engine(
         url='mssql+pyodbc://testnclogin:ncuser123!!@127.0.0.1:1433/testncintegration?TrustServerCertificate=yes&driver=ODBC+Driver+18+for+SQL+Server', connect_args={'autocommit': True}
     )
@@ -63,27 +55,19 @@ def ingestion_happens_succesfully(
                 delete from ncproject.ingestions;
                 """)
 
-    print("Happy path ended!!!")
-
 
 def test_no_need_to_ingest(
         airflow_api,
 ):
 
-   with TempComposeFile():
-       compose = DockerCompose(".", compose_file_name='other_compose.yaml', pull=True)
-       compose.start()
-       compose.wait_for('http://localhost:8080')
-       with FixtureDataBase():
-           with FixtureMinio() as minio_fixture:
-               no_need_to_ingest(airflow_api, minio_fixture)
-       compose.stop()
+   with FixtureDataBase():
+       with FixtureMinio() as minio_fixture:
+           no_need_to_ingest(airflow_api, minio_fixture)
 
 def no_need_to_ingest(
     airflow_api,
     minio_fixture
 ):
-    print("Happy path started!!!")
     engine: Engine = create_engine(
         url='mssql+pyodbc://testnclogin:ncuser123!!@127.0.0.1:1433/testncintegration?TrustServerCertificate=yes&driver=ODBC+Driver+18+for+SQL+Server', connect_args={'autocommit': True}
     )
@@ -120,5 +104,3 @@ def no_need_to_ingest(
     engine.execute("""
                 delete from ncproject.ingestions;
                 """)
-
-    print("Happy path ended!!!")
