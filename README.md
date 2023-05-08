@@ -14,11 +14,20 @@ it ingests the transactions in a MinIO store (like S3). Then it marks in another
 
 Tested with python 3.11.3.
 
+First install dependencies
+
 ```bash
 pip install -r requirements-dev.txt
 ```
 
-As easy as executing
+and the build "good" image
+
+```bash
+docker compose build
+```
+
+
+Now testing is as easy as executing
 
 ```bash
  pytest -vvv -s --log-cli-level=DEBUG tests/integration/test_automatically_sample_dag.py
