@@ -62,7 +62,7 @@ x-airflow-common:
     AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
     AIRFLOW__CORE__FERNET_KEY: ''
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
-    AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     # yamllint disable rule:line-length
     # Use simple http server on scheduler for health checks
@@ -72,8 +72,17 @@ x-airflow-common:
     # WARNING: Use _PIP_ADDITIONAL_REQUIREMENTS option ONLY for a quick checks
     # for other purpose (development, test and especially production usage) build/extend Airflow image.
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
-    AIRFLOW_VAR_MSSQL_STORE: 'mssql+pyodbc://nclogin:ncuser123!!@mssql:1433/ncintegration?TrustServerCertificate=yes&driver=ODBC+Driver+18+for+SQL+Server'
-    AIRFLOW_VAR_MINIO_BUFFER: 'newcross'
+    AIRFLOW_CONN_MSSQL_DB: 'mssql+pyodbc://nclogin:ncuser123!!@mssql:1433/ncintegration?TrustServerCertificate=yes&driver=ODBC+Driver+18+for+SQL+Server'
+    AIRFLOW_CONN_MINIO_STORE: '{
+        "conn_type": "aws",
+        "login": "minio_access_key",
+        "password": "minio_secret_key",
+        "extra": {
+            "endpoint_url": "http://minio:9000"
+          }
+     }'
+    AIRFLOW_VAR_MINIO_BUCKET: 'mybucket'
+
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
@@ -97,8 +106,8 @@ services:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
-    volumes:
-      - postgres-db-volume:/var/lib/postgresql/data
+#    volumes:
+#      - tut-postgres-db-volume:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "airflow"]
       interval: 10s
@@ -305,8 +314,8 @@ services:
     ports:
       - '9000:9000'
       - '9001:9001'
-    volumes:
-      - minio-data:/data
+#    volumes:
+#     - tut-minio-data:/data
     environment:
       MINIO_ROOT_USER: minio_access_key
       MINIO_ROOT_PASSWORD: minio_secret_key
@@ -323,8 +332,8 @@ services:
     image: 'mcr.microsoft.com/mssql/server:2022-latest'
     ports:
       - '1433:1433'
-    volumes:
-      - mssql-data:/var/opt/mssql
+#    volumes:
+#      - tut-mssql-data:/var/opt/mssql
     environment:
       ACCEPT_EULA: Y
       MSSQL_SA_PASSWORD: newcross_123
@@ -336,22 +345,22 @@ services:
       start_period: 10s
       timeout: 3s
 
-  datascience-notebook:
-    image: jupyter/base-notebook:latest
-    volumes:
-      - ./ds-work:/home/docker_worker/work
-    ports:
-      - 8891:8888
-    command: "start-notebook.sh"
-    user: root
-    environment:
-      NB_USER: docker_worker
-      NB_UID: 1008
-      NB_GID: 1011
-      CHOWN_HOME: 'yes'
-      CHOWN_HOME_OPTS: -R
+  # datascience-notebook:
+  #   image: jupyter/base-notebook:latest
+  #   volumes:
+  #     - ./ds-work:/home/docker_worker/work
+  #   ports:
+  #     - 8891:8888
+  #   command: "start-notebook.sh"
+  #   user: root
+  #   environment:
+  #     NB_USER: docker_worker
+  #     NB_UID: 1008
+  #     NB_GID: 1011
+  #     CHOWN_HOME: 'yes'
+  #     CHOWN_HOME_OPTS: -R
 
 volumes:
-  postgres-db-volume:
-  minio-data:
-  mssql-data:
+  tut-postgres-db-volume:
+  tut-minio-data:
+  tut-mssql-data:

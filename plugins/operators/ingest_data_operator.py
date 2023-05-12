@@ -1,12 +1,14 @@
 import io
 import logging
 from datetime import datetime
+from typing import List
 
-from airflow.models import BaseOperator, Variable
+from airflow.models import BaseOperator, Variable, Connection
 from airflow.models.taskinstance import Context
 from minio import Minio
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
+from airflow.hooks.base import BaseHook
 
 
 class IngestDataOperator(BaseOperator):
@@ -14,8 +16,9 @@ class IngestDataOperator(BaseOperator):
         super().__init__(*args, **kwargs)
 
     def execute(self, context: Context):
-        sqlalchemy_url = str(Variable.get('mssql_store'))
-        
+        connections: List[Connection] = BaseHook.get_connections('mssql_db')
+        sqlalchemy_url = connections[0].get_uri()
+
         logging.info(f"SQLALCHEMY URL IS {sqlalchemy_url}")
 
         engine = create_engine(
@@ -27,7 +30,6 @@ class IngestDataOperator(BaseOperator):
 
 
 def do_something(engine: Engine):
-
 
     try:
         res = engine.execute("SELECT max(last_transaction_date) from ncproject.fintransacts")
@@ -91,19 +93,20 @@ def do_something(engine: Engine):
 
 
 def save_dump(retrieved_data: str, last_ingestion_date: str):
-    minio_buffer = str(Variable.get('minio_buffer'))
+    minio_bucket = str(Variable.get('minio_bucket'))
+    connections: List[Connection] = BaseHook.get_connections('minio_store')
 
-    #Minio("127.0.0.1:5050", secure=False)
+    logging.info(f"Minio host {connections[0].extra_dejson.get('endpoint_url').replace('http://','')}")
     client = Minio(
-        "minio:9000",
+        connections[0].extra_dejson.get("endpoint_url").replace('http://',''),
         secure=False,
-        access_key="minio_access_key",
-        secret_key="minio_secret_key",
+        access_key=connections[0].login,
+        secret_key=connections[0].password,
     )
     logging.info(f"Data is {retrieved_data}")
     byte_buf = bytes(str(retrieved_data), 'utf-8')
     result = client.put_object(
-        minio_buffer, f"ingestions/{last_ingestion_date}/mydump", io.BytesIO(byte_buf), len(byte_buf),
+        minio_bucket, f"ingestions/{last_ingestion_date}/mydump", io.BytesIO(byte_buf), len(byte_buf),
         content_type="text/plain; charset=utf-8",
     )
     logging.info(

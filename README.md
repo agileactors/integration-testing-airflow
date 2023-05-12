@@ -20,7 +20,7 @@ First install dependencies
 pip install -r requirements-dev.txt
 ```
 
-and the build "good" image
+and then build "good" image.
 
 ```bash
 docker compose build
@@ -30,16 +30,20 @@ docker compose build
 Now testing is as easy as executing
 
 ```bash
+ rm -rf logs
  pytest -vvv -s --log-cli-level=DEBUG tests/integration/test_automatically_sample_dag.py
 ```
 
-Expect some flakiness the first ever time you run it.
 The integration tests (not complete) create a test MinIO buffer, a test database with test user, schema and table by executing a 
 modified version of the `docker-compose.yaml`
 
 ## Manual testing
 
-Here we run manually the steps leading to the integration tests. Start the deployment by running
+Here we run manually the steps leading to the integration tests. 
+For maintaining state uncomment the sections in docker compose for volumes. 
+Please comment them again before running the integration tests.
+
+Start the deployment by running
 
 ```bash
 docker-compose up
@@ -151,6 +155,6 @@ insert into  ncproject.fintransacts values (5, convert(DATETIME, '1968-10-27 12:
 ### Run the dag
 
 Visit the [airflow server](http://localhost:8080) and activate your dag. Extra info in official Airflow Documentation.
-[Airflow Apache Project]](https://airflow.apache.org/).
+[Airflow Apache Project](https://airflow.apache.org/).
 
 Have fun!

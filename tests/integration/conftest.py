@@ -10,19 +10,7 @@ from urllib3 import Retry
 from testcontainers.compose import DockerCompose
 
 from tests.integration.db_connection import get_connection
-from tests.integration.airflow_api import AirflowAPI
 from tests.integration.db_connection import setup_database, teardown_database
-
-
-@pytest.fixture
-def wait_for_airflow() -> requests.Session:
-    api_url = f"http://localhost:8080/health"
-    return assert_container_is_ready(api_url)
-
-
-@pytest.fixture
-def airflow_api():
-    return AirflowAPI()
 
 
 def assert_container_is_ready(readiness_check_url) -> requests.Session:
@@ -84,10 +72,10 @@ class FixtureMinio(object):
 
 
 def custom_transform_line(line: str) -> str:
-    if "AIRFLOW_VAR_MINIO_BUFFER" in line:
-        return "    AIRFLOW_VAR_MINIO_BUFFER: 'integration-bucket'\n"
-    elif "AIRFLOW_VAR_MSSQL_STORE" in line:
-        return "    AIRFLOW_VAR_MSSQL_STORE: 'mssql+pyodbc://testnclogin:ncuser123!!@mssql:1433/testncintegration?TrustServerCertificate=yes&driver=ODBC+Driver+18+for+SQL+Server'\n"
+    if "AIRFLOW_VAR_MINIO_BUCKET" in line:
+        return "    AIRFLOW_VAR_MINIO_BUCKET: 'integration-bucket'\n"
+    elif "AIRFLOW_CONN_MSSQL_DB" in line:
+        return "    AIRFLOW_CONN_MSSQL_DB: 'mssql+pyodbc://testnclogin:ncuser123!!@mssql:1433/testncintegration?TrustServerCertificate=yes&driver=ODBC+Driver+18+for+SQL+Server'\n"
     else:
         return line
 

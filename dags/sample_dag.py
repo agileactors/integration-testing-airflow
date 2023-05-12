@@ -1,4 +1,3 @@
-import logging
 from datetime import timedelta
 from operators.ingest_data_operator import IngestDataOperator
 import pendulum
@@ -14,7 +13,7 @@ DEFAULT_ARGS = {
     dag_id=DAG_ID,
     default_args=DEFAULT_ARGS,
     catchup=False,
-    schedule_interval=timedelta(minutes = 2),
+    schedule_interval=timedelta(minutes = 5),
     is_paused_upon_creation=True,
     description="Just a sample DAG",
 )
