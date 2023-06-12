@@ -10,6 +10,8 @@ This code is for tutorial purposes of the Agile Actors Data Chapter. It continue
 In summary the project sets up a PostgreSQL database where financial transactions are inserted. Airflow scans the table and when it finds new transactions, 
 it ingests the transactions in a MinIO store (like S3). Then it marks in another PostgreSQL database that the task has been accomplished. It is there for preventing double ingestions.
 
+
+For convenient developing in PyCharm setup interpreter paths for *plugins* and *dags*.
 ## Integration testing
 
 Tested with python 3.11.3.
