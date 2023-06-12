@@ -72,7 +72,8 @@ x-airflow-common:
     # WARNING: Use _PIP_ADDITIONAL_REQUIREMENTS option ONLY for a quick checks
     # for other purpose (development, test and especially production usage) build/extend Airflow image.
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
-    AIRFLOW_CONN_MSSQL_DB: 'mssql+pyodbc://nclogin:ncuser123!!@mssql:1433/ncintegration?TrustServerCertificate=yes&driver=ODBC+Driver+18+for+SQL+Server'
+    AIRFLOW_CONN_INGESTIONS_DB: 'postgresql://ingestionuser:ingestion123@ingestions:5432/ingestiondb'
+    AIRFLOW_CONN_FINANCES_DB: 'postgresql://dataengineer:dataengineer123@ingestions:5432/financedb'
     AIRFLOW_CONN_MINIO_STORE: '{
         "conn_type": "aws",
         "login": "minio_access_key",
@@ -96,7 +97,7 @@ x-airflow-common:
       condition: service_healthy
     minio:
       condition: service_healthy
-    mssql:
+    ingestions:
       condition: service_healthy
 
 services:
@@ -314,8 +315,8 @@ services:
     ports:
       - '9000:9000'
       - '9001:9001'
-#    volumes:
-#     - tut-minio-data:/data
+    volumes:
+     - ./tut-minio-data:/data
     environment:
       MINIO_ROOT_USER: minio_access_key
       MINIO_ROOT_PASSWORD: minio_secret_key
@@ -326,24 +327,20 @@ services:
       timeout: 5s
       retries: 6
 
-  # https://learn.microsoft.com/en-us/sql/linux/quickstart-install-connect-docker?view=sql-server-ver16&pivots=cs1-bash
-  # https://github.com/docker/awesome-compose/blob/master/aspnet-mssql/compose.yaml
-  mssql:
-    image: 'mcr.microsoft.com/mssql/server:2022-latest'
+  ingestions:
+    image: postgres:15.3
     ports:
-      - '1433:1433'
+      - 5432:5432
 #    volumes:
-#      - tut-mssql-data:/var/opt/mssql
+#      - tut-postgres-data:/var/lib/postgresql/data
     environment:
-      ACCEPT_EULA: Y
-      MSSQL_SA_PASSWORD: newcross_123
-    restart: always
+      POSTGRES_PASSWORD: example
     healthcheck:
-      test: [ "CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P newcross_123 -Q 'SELECT 1' || exit 1" ]
+      test: [ "CMD", "pg_isready", "-U", "postgres" ]
       interval: 10s
-      retries: 10
-      start_period: 10s
-      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: always
 
   # datascience-notebook:
   #   image: jupyter/base-notebook:latest
@@ -362,5 +359,4 @@ services:
 
 volumes:
   tut-postgres-db-volume:
-  tut-minio-data:
-  tut-mssql-data:
+  tut-postgres-data:

@@ -1,12 +1,6 @@
-use testncintegration;
-drop table IF EXISTS ncproject.fintransacts;
-drop table IF EXISTS ncproject.ingestions;
-drop user IF EXISTS testncuser;
-
-IF SUSER_ID('testnclogin') IS NOT NULL
-	drop login testnclogin;
-
-drop schema IF EXISTS ncproject;
-
-use master;
-drop database IF EXISTS testncintegration;
+revoke all PRIVILEGES on ALL TABLES IN schema fooproject FROM dataengineer;
+revoke USAGE ON SCHEMA fooproject FROM dataengineer ;
+REVOKE all PRIVILEGES ON DATABASE financedb FROM dataengineer;
+drop user dataengineer;
+drop table if exists fooproject.fintransacts;
+drop schema if exists fooproject;

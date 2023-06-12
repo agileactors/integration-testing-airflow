@@ -1,43 +1,29 @@
 import logging
-import os
+import time
+from typing import Tuple
 
 import pytest
-import requests
 from minio import Minio
 from minio.deleteobjects import DeleteObject
-from requests.adapters import HTTPAdapter
-from urllib3 import Retry
+from sqlalchemy import create_engine, orm
+from sqlalchemy.orm import Session
 from testcontainers.compose import DockerCompose
 
-from tests.integration.db_connection import get_connection
-from tests.integration.db_connection import setup_database, teardown_database
+from plugins.operators.models import Fintransact, Ingestion
+from tests.integration.db_connection import (setup_finances_db,
+                                             setup_ingestions_db,
+                                             teardown_finances_db,
+                                             teardown_ingestions_db)
 
 
-def assert_container_is_ready(readiness_check_url) -> requests.Session:
-    request_session = requests.Session()
-    retries = Retry(
-        total=20,
-        backoff_factor=0.2,
-        status_forcelist=[404, 500, 502, 503, 504],
+def cleanup_bucket(minio_client: Minio):
+    delete_object_list = map(
+        lambda x: DeleteObject(x.object_name),
+        minio_client.list_objects("mybucket", "ingestions", recursive=True),
     )
-    request_session.mount("http://", HTTPAdapter(max_retries=retries))
-    assert request_session.get(readiness_check_url)
-    return request_session
-
-
-class FixtureDataBase(object):
-    def __init__(self):
-        self.engine = get_connection()
-        res = self.engine.execute("SELECT * FROM sys.databases WHERE name = N'testncintegration'")
-        if res:
-            res = res.all()
-
-        if not res:
-            self.engine.execute("CREATE DATABASE testncintegration")
-    def __enter__(self):
-        setup_database(self.engine)
-    def __exit__(self, sometype, value, traceback):
-        teardown_database(self.engine)
+    errors = minio_client.remove_objects("mybucket", delete_object_list)
+    for error in errors:
+        logging.error("error occurred when deleting object", error)
 
 
 class FixtureMinio(object):
@@ -48,50 +34,64 @@ class FixtureMinio(object):
             access_key="minio_access_key",
             secret_key="minio_secret_key",
         )
+
     def __enter__(self):
-        if self.client.bucket_exists("integration-bucket"):
-            self.delete_bucket()
-        self.client.make_bucket("integration-bucket")
         return self.client
 
     def __exit__(self, sometype, value, traceback):
-        if self.client.bucket_exists("integration-bucket"):
-            self.delete_bucket()
+        cleanup_bucket(self.client)
 
 
-    def delete_bucket(self):
-        delete_object_list = map(
-            lambda x: DeleteObject(x.object_name),
-            self.client.list_objects("integration-bucket", None, recursive=True),
+class FixtureDB(object):
+    def __init__(self):
+        ingestions_engine = create_engine(
+            url="postgresql://ingestionuser:ingestion123@localhost:5432/ingestiondb"
         )
-        errors = self.client.remove_objects("integration-bucket", delete_object_list)
-        for error in errors:
-            logging.error("error occurred when deleting object", error)
+        session_maker = orm.sessionmaker(bind=ingestions_engine)
+        self.ingestions_session = session_maker()
+        finances_engine = create_engine(
+            url="postgresql://dataengineer:dataengineer123@localhost:5432/financedb"
+        )
+        session_maker = orm.sessionmaker(bind=finances_engine)
+        self.finances_session = session_maker()
 
-        self.client.remove_bucket("integration-bucket")
+    def __enter__(self) -> Tuple[Session, Session]:
+        return (self.ingestions_session, self.finances_session)
 
+    def __exit__(self, sometype, value, traceback):
+        self.ingestions_session.query(Ingestion).delete()
+        self.ingestions_session.commit()
+        self.finances_session.query(Fintransact).delete()
+        self.finances_session.commit()
+        print("Done")
 
-def custom_transform_line(line: str) -> str:
-    if "AIRFLOW_VAR_MINIO_BUCKET" in line:
-        return "    AIRFLOW_VAR_MINIO_BUCKET: 'integration-bucket'\n"
-    elif "AIRFLOW_CONN_MSSQL_DB" in line:
-        return "    AIRFLOW_CONN_MSSQL_DB: 'mssql+pyodbc://testnclogin:ncuser123!!@mssql:1433/testncintegration?TrustServerCertificate=yes&driver=ODBC+Driver+18+for+SQL+Server'\n"
-    else:
-        return line
 
 @pytest.fixture(scope="session", autouse=True)
 def auto_resource(request):
-    with open("docker-compose.yaml") as f:
-        lines = [custom_transform_line(line) for line in f]
-    with open('other_compose.yaml', 'w') as f:
-        f.writelines(lines)
-    compose = DockerCompose(".", compose_file_name='other_compose.yaml', pull=True)
+    compose = DockerCompose(".", compose_file_name="docker-compose.yaml", pull=True)
     compose.start()
-    compose.wait_for('http://localhost:8080')
+    compose.wait_for("http://localhost:8080/health")
 
+    setup_finances_db()
+    setup_ingestions_db()
+
+    client: Minio = Minio(
+        "127.0.0.1:9000",
+        secure=False,
+        access_key="minio_access_key",
+        secret_key="minio_secret_key",
+    )
+    client.make_bucket("mybucket")
+
+    # print("Blocking")
+    # while True:
+    #     time.sleep(10)
 
     def auto_resource_fin():
+        cleanup_bucket(client)
+        client.remove_bucket("mybucket")
+        teardown_finances_db()
+        teardown_ingestions_db()
         compose.stop()
-        os.unlink('other_compose.yaml')
 
     request.addfinalizer(auto_resource_fin)
