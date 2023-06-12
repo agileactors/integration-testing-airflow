@@ -45,12 +45,12 @@ class FixtureMinio(object):
 class FixtureDB(object):
     def __init__(self):
         ingestions_engine = create_engine(
-            url="postgresql://ingestionuser:ingestion123@localhost:5432/ingestiondb"
+            url="postgresql+psycopg2://ingestionuser:ingestion123@localhost:5432/ingestiondb"
         )
         session_maker = orm.sessionmaker(bind=ingestions_engine)
         self.ingestions_session = session_maker()
         finances_engine = create_engine(
-            url="postgresql://dataengineer:dataengineer123@localhost:5432/financedb"
+            url="postgresql+psycopg2://dataengineer:dataengineer123@localhost:5432/financedb"
         )
         session_maker = orm.sessionmaker(bind=finances_engine)
         self.finances_session = session_maker()

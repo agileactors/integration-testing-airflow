@@ -32,10 +32,10 @@ docker compose build
 Now testing is as easy as executing
 
 ```bash
- docker compose down
+ docker compose down -v
  rm -rf tut-minio-data && mkdir tut-minio-data
  rm -rf logs
- pytest -vvv -s --log-cli-level=DEBUG tests/integration/test_automatically_sample_dag.py
+ pytest -vvv -s --log-cli-level=DEBUG tests/integration/test_ingestions.py
 ```
 
 The integration tests (not complete) 

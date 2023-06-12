@@ -10,7 +10,7 @@ from alembic import context
 # access to the values within the .ini file in use.
 config = context.config
 
-db_url = os.getenv("INGESTIONS_DB_URL", "postgresql://postgres:example@localhost:5432/ingestiondb")
+db_url = os.getenv("INGESTIONS_DB_URL", "postgresql+psycopg2://postgres:example@localhost:5432/ingestiondb")
 config.set_main_option("sqlalchemy.url", db_url)
 
 # Interpret the config file for Python logging.

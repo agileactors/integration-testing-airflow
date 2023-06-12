@@ -15,7 +15,6 @@ from sqlalchemy.orm import Session
 def create_session_from_connection(conn_id: str) -> Session:
     connections: List[Connection] = BaseHook.get_connections(conn_id)
     sqlalchemy_url = connections[0].get_uri()
-    sqlalchemy_url = sqlalchemy_url.replace("postgres:", "postgresql:")
     engine = create_engine(url=sqlalchemy_url)
     session_maker = orm.sessionmaker(bind=engine)
     return session_maker()

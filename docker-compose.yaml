@@ -72,8 +72,8 @@ x-airflow-common:
     # WARNING: Use _PIP_ADDITIONAL_REQUIREMENTS option ONLY for a quick checks
     # for other purpose (development, test and especially production usage) build/extend Airflow image.
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
-    AIRFLOW_CONN_INGESTIONS_DB: 'postgresql://ingestionuser:ingestion123@ingestions:5432/ingestiondb'
-    AIRFLOW_CONN_FINANCES_DB: 'postgresql://dataengineer:dataengineer123@ingestions:5432/financedb'
+    AIRFLOW_CONN_INGESTIONS_DB: 'postgresql+psycopg2://ingestionuser:ingestion123@ingestions:5432/ingestiondb'
+    AIRFLOW_CONN_FINANCES_DB: 'postgresql+psycopg2://dataengineer:dataengineer123@ingestions:5432/financedb'
     AIRFLOW_CONN_MINIO_STORE: '{
         "conn_type": "aws",
         "login": "minio_access_key",
