@@ -7,8 +7,8 @@ This code is for tutorial purposes of the Agile Actors Data Chapter. It continue
 [Basic integration Testing](https://github.com/fithisux/airflow-integration-testing) in the spirirt of
 [Testing in Airflow Part 2 — Integration Tests and End-To-End Pipeline Tests](https://medium.com/@chandukavar/testing-in-airflow-part-2-integration-tests-and-end-to-end-pipeline-tests-af0555cd1a82)
 
-In summary the project sets up an SQL Server with "transactions". Airflow scans the table and when it finds new transactions, 
-it ingests the transactions in a MinIO store (like S3). Then it marks in another table that the task has been accomplished.
+In summary the project sets up an SQL Server where financial transactions are inserted. Airflow scans the table and when it finds new transactions, 
+it ingests the transactions in a MinIO store (like S3). Then it marks in another table that the task has been accomplished. It is there for preventing double ingetsions.
 
 ## Integration testing
 
@@ -59,7 +59,7 @@ Credentials are in the `docker-compose.yaml`.
 
 ### Create users and tables.
 
-Connect with DBeaver to the SQL Server with credntials
+Connect with DBeaver to the SQL Server with credentials
 
 ```python
 user = 'sa'
