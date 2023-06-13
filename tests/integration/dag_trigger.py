@@ -27,8 +27,6 @@ def run_dag(dag_id: str):
         print("[blue]Triggering a DAG run")
         dag_run_api_instance = dag_run_api.DAGRunApi(api_client)
         try:
-            # Create a DAGRun object (no dag_id should be specified because it is read-only property of DAGRun)
-            # dag_run id is generated randomly to allow multiple executions of the script
             dag_run_id = "some_test_run_" + uuid.uuid4().hex
             dag_run = DAGRun(dag_run_id=dag_run_id)
             _ = dag_run_api_instance.post_dag_run(dag_id, dag_run)

@@ -1,8 +1,8 @@
 import datetime
 from typing import Optional
 
-from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 from plugins.operators.models import Fintransact, Ingestion
 from tests.integration.conftest import FixtureDB, FixtureMinio
@@ -22,6 +22,7 @@ def retrieve_latest_ingestion(ingestion_session: Session) -> Optional[Ingestion]
         )
     else:
         return None
+
 
 def test_ingestion_happens_succesfully():
     with FixtureMinio() as minio_fixture:
@@ -66,8 +67,10 @@ def ingestion_happens_succesfully(
         == 1
     )
 
-    print(f'Files are')
-    for obj in minio_fixture.list_objects("mybucket", f"ingestions/ts={ingestion_date}/", recursive=True):
+    print("Files are")
+    for obj in minio_fixture.list_objects(
+        "mybucket", f"ingestions/ts={ingestion_date}/", recursive=True
+    ):
         print(obj.object_name)
 
 

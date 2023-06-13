@@ -98,7 +98,7 @@ def save_dump(retrieved_data: List[Dict[str, Any]], last_ingestion_date: datetim
     endpoint_url = connections[0].extra_dejson.get("endpoint_url")
 
     if endpoint_url is None:
-        logging.error(f"Minio host has not endpoint_url in extras")
+        logging.error("Minio host has not endpoint_url in extras")
     else:
         minio_host = endpoint_url.replace("http://", "")
 

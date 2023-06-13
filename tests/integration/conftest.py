@@ -1,5 +1,4 @@
 import logging
-import time
 from typing import Tuple
 
 import pytest
@@ -42,16 +41,20 @@ class FixtureMinio(object):
         cleanup_bucket(self.client)
 
 
+INGESTION_DB = (
+    "postgresql+psycopg2://ingestionuser:ingestion123@localhost:5432/ingestiondb"
+)
+FINANCE_DB = (
+    "postgresql+psycopg2://dataengineer:dataengineer123@localhost:5432/financedb"
+)
+
+
 class FixtureDB(object):
     def __init__(self):
-        ingestions_engine = create_engine(
-            url="postgresql+psycopg2://ingestionuser:ingestion123@localhost:5432/ingestiondb"
-        )
+        ingestions_engine = create_engine(url=INGESTION_DB)
         session_maker = orm.sessionmaker(bind=ingestions_engine)
         self.ingestions_session = session_maker()
-        finances_engine = create_engine(
-            url="postgresql+psycopg2://dataengineer:dataengineer123@localhost:5432/financedb"
-        )
+        finances_engine = create_engine(url=FINANCE_DB)
         session_maker = orm.sessionmaker(bind=finances_engine)
         self.finances_session = session_maker()
 
