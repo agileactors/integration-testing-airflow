@@ -22,27 +22,55 @@ def create_session_from_connection(conn_id: str) -> Session:
 
 def retrieve_last_transaction_date(finances_session: Session) -> Optional[datetime]:
     result: Optional[Any] = finances_session.query(
-        func.min(Fintransact.last_transaction_date)
+        func.max(Fintransact.last_transaction_date)
     ).scalar()
     logging.info(f"Fintransacts said {result}")
-    if result:
-        return cast(datetime, result)
-    else:
-        return None
+
+    last_transaction_date: Optional[datetime] = cast(Optional[datetime], result)
+    logging.info(last_transaction_date)
+    return last_transaction_date
 
 
-def retrieve_top_ingestions(ingestion_session: Session) -> List[Ingestion]:
-    result = ingestion_session.query(func.max(Ingestion.last_transaction_date)).scalar()
+def retrieve_top_ingestion(ingestion_session: Session) -> Optional[Ingestion]:
+    result = ingestion_session.query(func.max(Ingestion.ingestion_date)).scalar()
     logging.info(f"Ingestions said {result}")
 
+    top_ingestion: Optional[Ingestion] = None
+
     if result:
-        return (
+        top_ingestion = (
             ingestion_session.query(Ingestion)
-            .filter(Ingestion.last_transaction_date == result)
-            .all()
+            .filter(Ingestion.ingestion_date == result)
+            .scalar()
         )
+
+    logging.info(top_ingestion)
+    return top_ingestion
+
+
+def list_unprocessed_transactions(
+    last_transaction_date: datetime,
+    top_ingestion: Optional[Ingestion],
+    finances_session: Session,
+) -> List[Fintransact]:
+    fintrasacts: List[Fintransact] = []
+    if not top_ingestion:
+        fintrasacts = finances_session.query(Fintransact).all()
     else:
-        return []
+        if last_transaction_date > top_ingestion.last_transaction_date:
+            fintrasacts = (
+                finances_session.query(Fintransact)
+                .filter(
+                    Fintransact.last_transaction_date
+                    > top_ingestion.last_transaction_date
+                )
+                .filter(Fintransact.last_transaction_date <= last_transaction_date)
+                .all()
+            )
+        else:
+            logging.info("Nothing new")
+
+    return fintrasacts
 
 
 class IngestDataOperator(BaseOperator):
@@ -56,35 +84,20 @@ class IngestDataOperator(BaseOperator):
             last_transaction_date: Optional[datetime] = retrieve_last_transaction_date(
                 finances_session
             )
-            logging.info(last_transaction_date)
 
             if last_transaction_date is None:
                 logging.info("No data")
                 return
 
-            top_ingestions: List[Ingestion] = retrieve_top_ingestions(ingestion_session)
-            logging.info(top_ingestions)
+            top_ingestion: Optional[Ingestion] = retrieve_top_ingestion(
+                ingestion_session
+            )
 
-            fintrasacts: List[Fintransact] = []
-            if not top_ingestions:
-                fintrasacts = finances_session.query(Fintransact).all()
-            else:
-                top_ingestion = top_ingestions[0]
-                if last_transaction_date > top_ingestion.last_transaction_date:
-                    fintrasacts = (
-                        finances_session.query(Fintransact)
-                        .filter(
-                            Fintransact.last_transaction_date.between(
-                                top_ingestion.last_transaction_date,
-                                last_transaction_date,
-                            )
-                        )
-                        .all()
-                    )
-                else:
-                    logging.info("Nothing new")
+            fintrasacts: List[Fintransact] = list_unprocessed_transactions(
+                last_transaction_date, top_ingestion, finances_session
+            )
 
-            insert_data(fintrasacts, ingestion_session, last_transaction_date)
+            dump_to_cloud_storage(fintrasacts, ingestion_session, last_transaction_date)
 
         except Exception as ex:
             logging.info(
@@ -128,7 +141,7 @@ def save_dump(retrieved_data: List[Dict[str, Any]], last_ingestion_date: datetim
         )
 
 
-def insert_data(
+def dump_to_cloud_storage(
     fintrasacts: List[Fintransact],
     ingestion_session: Session,
     last_transaction_date: datetime,
@@ -136,10 +149,13 @@ def insert_data(
     if fintrasacts:
         ingestion = Ingestion(last_transaction_date=last_transaction_date)
         ingestion_session.add(ingestion)
-        ingestion_session.commit()
+        ingestion_session.flush()
         ingestion_session.refresh(ingestion)
+
         logging.info(f"Ingestion timestamp is {ingestion.ingestion_date}")
         retrieved_data: List[Dict[str, Any]] = [
             fintrasact.__dict__ for fintrasact in fintrasacts
         ]
         save_dump(retrieved_data, ingestion.ingestion_date)
+
+        ingestion_session.commit()

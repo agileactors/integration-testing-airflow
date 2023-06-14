@@ -12,6 +12,20 @@ it ingests the transactions in a MinIO store (like S3). Then it marks in another
 
 
 For convenient developing in PyCharm setup interpreter paths for *plugins* and *dags*.
+
+## General testing
+First install dependencies
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+and run
+
+```bash
+  tox
+```
+
 ## Integration testing
 
 Tested with python 3.11.3.
@@ -28,8 +42,8 @@ and then build "good" image.
 docker compose build
 ```
 
-
 Now testing is as easy as executing
+
 
 ```bash
  docker compose down -v
@@ -53,7 +67,7 @@ Please comment them again before running the integration tests.
 Start the deployment by running
 
 ```bash
-docker-compose up
+docker compose up
 ```
 
 Now you need to create users, tables and buffer.
@@ -61,7 +75,7 @@ Now you need to create users, tables and buffer.
 ### Create buffer
 
 Connect to [MinIO](http://127.0.0.1:9001) and create a buffer named `bucket`. This is the name that appears in airflow variable.
-Credentials are in the `docker-compose.yaml`.
+Credentials are in the `docker-compose.yaml`. Leave it open to see the ingestions.
 
 
 ### Create users and tables.
@@ -91,6 +105,12 @@ Here alembic covers you
 
 ```bash
 alembic upgrade head
+```
+
+to nuke it when you're finished
+
+```bash
+alembic downgrade base
 ```
 
 ### Run the dag

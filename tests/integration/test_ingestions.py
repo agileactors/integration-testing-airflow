@@ -11,17 +11,21 @@ from tests.integration.dag_trigger import run_dag
 SAMPLE_DAG_ID = "sample"
 
 
-def retrieve_latest_ingestion(ingestion_session: Session) -> Optional[Ingestion]:
+def retrieve_top_ingestion(ingestion_session: Session) -> Optional[Ingestion]:
     result = ingestion_session.query(func.max(Ingestion.ingestion_date)).scalar()
+    print(f"Ingestions said {result}")
+
+    top_ingestion: Optional[Ingestion] = None
 
     if result:
-        return (
+        top_ingestion = (
             ingestion_session.query(Ingestion)
             .filter(Ingestion.ingestion_date == result)
             .scalar()
         )
-    else:
-        return None
+
+    print(top_ingestion)
+    return top_ingestion
 
 
 def test_ingestion_happens_succesfully():
@@ -45,9 +49,13 @@ def ingestion_happens_succesfully(
     finances_session.add(finstrasact)
     finances_session.commit()
 
+    # print("Blocking")
+    # while True:
+    #     time.sleep(10)
+
     run_dag(SAMPLE_DAG_ID)
 
-    ingestion: Optional[Ingestion] = retrieve_latest_ingestion(ingestions_session)
+    ingestion: Optional[Ingestion] = retrieve_top_ingestion(ingestions_session)
 
     assert ingestion is not None
 
