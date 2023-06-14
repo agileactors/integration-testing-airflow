@@ -13,7 +13,6 @@ SAMPLE_DAG_ID = "sample"
 
 def retrieve_top_ingestion(ingestion_session: Session) -> Optional[Ingestion]:
     result = ingestion_session.query(func.max(Ingestion.ingestion_date)).scalar()
-    print(f"Ingestions said {result}")
 
     top_ingestion: Optional[Ingestion] = None
 
@@ -24,7 +23,6 @@ def retrieve_top_ingestion(ingestion_session: Session) -> Optional[Ingestion]:
             .scalar()
         )
 
-    print(top_ingestion)
     return top_ingestion
 
 
@@ -39,6 +37,11 @@ def test_ingestion_happens_succesfully():
 def ingestion_happens_succesfully(
     minio_fixture, ingestions_session: Session, finances_session: Session
 ):
+    assert (
+        len(list(minio_fixture.list_objects("mybucket", "ingestions/", recursive=True)))
+        == 0
+    )
+
     last_transaction_date = datetime.datetime(
         year=1968, month=10, day=23, hour=12, minute=45, second=37
     )
@@ -89,6 +92,11 @@ def test_no_need_to_ingest():
 
 
 def no_need_to_ingest(minio_fixture, ingestions_session, finances_session):
+    assert (
+        len(list(minio_fixture.list_objects("mybucket", "ingestions/", recursive=True)))
+        == 0
+    )
+
     last_transaction_date = datetime.datetime(
         year=1968, month=10, day=23, hour=12, minute=45, second=37
     )
