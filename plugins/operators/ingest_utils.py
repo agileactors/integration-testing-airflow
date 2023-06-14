@@ -1,7 +1,8 @@
 import io
+import json
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Dict, List, Optional, cast
 
 from minio import Minio
@@ -71,6 +72,14 @@ class MinioConfig:
     bucket: str
 
 
+def json_serial(obj):
+    """JSON serializer for objects not serializable by default json code"""
+
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    raise TypeError("Type %s not serializable" % type(obj))
+
+
 def save_dump(
     minio_config: MinioConfig,
     retrieved_data: List[Dict[str, Any]],
@@ -87,10 +96,17 @@ def save_dump(
             secret_key=minio_config.secret_key,
         )
         logging.info(f"Data is {retrieved_data}")
-        byte_buf = bytes(str(retrieved_data), "utf-8")
+
+        str_data = json.dumps(
+            retrieved_data, indent=4, sort_keys=True, default=json_serial
+        )
+        byte_buf = bytes(
+            str_data,
+            "utf-8",
+        )
         result = client.put_object(
             minio_config.bucket,
-            f"ingestions/ts={last_ingestion_date}/mydump",
+            f"ingestions/ts={last_ingestion_date}/mydump.json",
             io.BytesIO(byte_buf),
             len(byte_buf),
             content_type="text/plain; charset=utf-8",
@@ -117,9 +133,11 @@ def dump_to_cloud_storage(
         ingestion_session.refresh(ingestion)
 
         logging.info(f"Ingestion timestamp is {ingestion.ingestion_date}")
-        retrieved_data: List[Dict[str, Any]] = [
-            fintrasact.__dict__ for fintrasact in fintrasacts
-        ]
+        retrieved_data: List[Dict[str, Any]] = []
+        for fintrasact in fintrasacts:
+            temp: Dict[str, Any] = fintrasact.__dict__
+            temp.pop("_sa_instance_state")
+            retrieved_data.append(temp)
         save_dump(minio_config, retrieved_data, ingestion.ingestion_date)
 
         ingestion_session.commit()

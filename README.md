@@ -101,6 +101,17 @@ DROP DATABASE financedb;
 
 #### Ingestions database
 
+First we need a database
+
+```sql
+CREATE DATABASE ingestiondb;
+```
+which we can dispose if we do not need it
+
+```sql
+DROP DATABASE ingestiondb;
+```
+
 Here alembic covers you
 
 ```bash

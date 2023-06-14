@@ -20,6 +20,20 @@ def create_session_from_connection(conn_id: str) -> Session:
     return session_maker()
 
 
+def create_minio_config() -> MinioConfig:
+    connections: List[Connection] = BaseHook.get_connections("minio_store")
+    endpoint_url = connections[0].extra_dejson.get("endpoint_url")
+
+    return MinioConfig(
+        minio_host=endpoint_url.replace("http://", "")
+        if endpoint_url is not None
+        else None,
+        access_key=connections[0].login,
+        secret_key=connections[0].password,
+        bucket=str(Variable.get("minio_bucket")),
+    )
+
+
 class IngestDataOperator(BaseOperator):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -27,18 +41,8 @@ class IngestDataOperator(BaseOperator):
     def execute(self, context: Context):
         finances_session = create_session_from_connection("finances_db")
         ingestion_session = create_session_from_connection("ingestions_db")
+        minio_config = create_minio_config()
 
-        connections: List[Connection] = BaseHook.get_connections("minio_store")
-        endpoint_url = connections[0].extra_dejson.get("endpoint_url")
-
-        minio_config = MinioConfig(
-            minio_host=endpoint_url.replace("http://", "")
-            if endpoint_url is not None
-            else None,
-            access_key=connections[0].login,
-            secret_key=connections[0].password,
-            bucket=str(Variable.get("minio_bucket")),
-        )
         try:
             last_transaction_date: Optional[
                 datetime
