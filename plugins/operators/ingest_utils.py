@@ -71,7 +71,7 @@ class MinioConfig:
     secret_key: str
     bucket: str
 
-
+# https://stackoverflow.com/questions/11875770/how-to-overcome-datetime-datetime-not-json-serializable
 def json_serial(obj):
     """JSON serializer for objects not serializable by default json code"""
 
