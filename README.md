@@ -11,7 +11,13 @@ In summary the project sets up a PostgreSQL database where financial transaction
 it ingests the transactions in a MinIO store (like S3). Then it marks in another PostgreSQL database that the task has been accomplished. It is there for preventing double ingestions.
 
 
-For convenient developing in PyCharm setup interpreter paths for *plugins* and *dags*.
+For convenient developing in PyCharm setup interpreter paths for *plugins* and *dags*. Install also
+
+```bash
+pip install -r requirements-docker.txt
+```
+
+for autocompletion.
 
 ## General testing
 First install dependencies
