@@ -93,6 +93,7 @@ Connect with DBeaver to the Postgresql with credentials in the corresponding `do
 CREATE DATABASE financedb;
 ```
 
+(of course we could have inserted everything in docker compose like [here](https://levelup.gitconnected.com/creating-and-filling-a-postgres-db-with-docker-compose-e1607f6f882f))
 Now you can run an SQL script in order to  [set up the financial database](tests/integration/setup_database.sql).
 
 When you are finished
