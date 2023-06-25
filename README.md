@@ -19,6 +19,9 @@ pip install -r requirements-docker.txt
 
 for autocompletion.
 
+
+*** NOTE *** : Code has been tested by both Docker Desktop and colima in MacOS. So FOSS friends should have an enjoyful experience.
+
 ## General testing
 First install dependencies
 
@@ -45,15 +48,14 @@ pip install -r requirements-dev.txt
 and then build "good" image.
 
 ```bash
-docker compose build
+docker-compose build
 ```
 
 Now testing is as easy as executing
 
 
 ```bash
- docker compose down -v
- rm -rf tut-minio-data && mkdir tut-minio-data
+ docker-compose down -v
  rm -rf logs
  pytest -vvv -s --log-cli-level=DEBUG tests/integration/test_ingestions.py
 ```
@@ -73,7 +75,7 @@ Please comment them again before running the integration tests.
 Start the deployment by running
 
 ```bash
-docker compose up
+docker-compose up
 ```
 
 Now you need to create users, tables and buffer.

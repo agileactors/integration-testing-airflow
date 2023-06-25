@@ -316,7 +316,7 @@ services:
       - '9000:9000'
       - '9001:9001'
     volumes:
-     - ./tut-minio-data:/data
+      - tut-bucket-data:/data
     environment:
       MINIO_ROOT_USER: minio_access_key
       MINIO_ROOT_PASSWORD: minio_secret_key
@@ -360,3 +360,4 @@ services:
 volumes:
   tut-postgres-db-volume:
   tut-postgres-data:
+  tut-bucket-data:
